@@ -1,0 +1,15 @@
+# Rebuilt by `python main.py`
+data/ab_test.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+~$*.xlsx

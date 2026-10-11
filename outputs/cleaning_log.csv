@@ -1,0 +1,8 @@
+step,rows
+Rows in raw file,588101
+Rows with a missing value (removed),0
+Rows with a repeated user_id (removed),0
+Rows with an unknown test group (removed),0
+"Rows with an invalid day, hour or ad count (removed)",0
+"Users who saw an extreme number of ads, top 0.1% (kept, re-tested without them)",589
+Rows in clean dataset,588101

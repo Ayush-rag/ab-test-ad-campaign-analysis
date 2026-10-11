@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A/B Test Results</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6; --control: #a3a199; --good: #0ca30c; --good-text: #006300; --good-bg: rgba(12, 163, 12, 0.08);
+    --warn-bg: rgba(250, 178, 25, 0.12); --warn-text: #7a5300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5; --control: #75736c; --good-text: #0ca30c; --good-bg: rgba(12, 163, 12, 0.14);
+      --warn-bg: rgba(250, 178, 25, 0.14); --warn-text: #fab219;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5; --control: #75736c; --good-text: #0ca30c; --good-bg: rgba(12, 163, 12, 0.14);
+    --warn-bg: rgba(250, 178, 25, 0.14); --warn-text: #fab219;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.45; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 24px 48px; }
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; align-items: end; }
+  h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.01em; }
+  .sub { margin: 4px 0 0; color: var(--text-secondary); }
+  .badge { font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 22px 0 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .filter-label { font-size: 12px; color: var(--text-muted); margin-right: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .group { display: flex; align-items: center; gap: 6px; }
+  select, input { font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface); border: 1px solid var(--axis); border-radius: 8px; padding: 5px 8px; }
+  input { width: 110px; }
+  .reset { font: inherit; font-size: 13px; background: none; border: none; color: var(--accent); cursor: pointer; padding: 4px; }
+  select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .verdict { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; border: 1px solid var(--border); }
+  .verdict.yes { background: var(--good-bg); }
+  .verdict.no { background: var(--warn-bg); }
+  .verdict .icon { font-size: 20px; line-height: 1.2; }
+  .verdict.yes .icon { color: var(--good-text); }
+  .verdict.no .icon { color: var(--warn-text); }
+  .verdict .head { font-size: 16px; font-weight: 650; }
+  .verdict .body { color: var(--text-secondary); margin-top: 2px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi .label { font-size: 12px; color: var(--text-secondary); }
+  .kpi .value { font-size: 24px; font-weight: 650; margin-top: 2px; letter-spacing: -0.01em; }
+  .kpi .note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 8px; min-width: 0; }
+  .card.full { grid-column: 1 / -1; }
+  .card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card .desc { margin: 2px 0 6px; color: var(--text-secondary); font-size: 13px; }
+  .chart { width: 100%; height: 300px; }
+  .note-line { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+  .calc { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 10px 0 6px; }
+  .calc .big { font-size: 26px; font-weight: 650; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 12px; }
+  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  th:first-child, td:first-child { text-align: left; }
+  td { font-variant-numeric: tabular-nums; }
+  .sig { color: var(--good-text); font-weight: 600; }
+  .table-wrap { overflow-x: auto; }
+
+  .insights ol { margin: 8px 0 12px; padding-left: 20px; }
+  .insights li { margin-bottom: 6px; color: var(--text-secondary); }
+  .insights li strong { color: var(--text-primary); font-weight: 600; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--text-muted); }
+
+  @media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px) {
+    .wrap { padding: 20px 16px 40px; }
+    .grid { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .kpi .value { font-size: 21px; }
+  }
+</style>
+<script>__PLOTLY_JS__</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>A/B Test: Does the Ad Increase Sales?</h1>
+      <p class="sub">588,101 users &middot; group A saw the ad, group B (control) saw a public service announcement</p>
+    </div>
+    <span class="badge">Public Kaggle dataset &middot; 95% confidence &middot; two-proportion z-test</span>
+  </header>
+
+  <section class="filters" aria-label="Filters">
+    <div class="group"><span class="filter-label">Day</span>
+      <select id="daySel" aria-label="Day the user saw most ads"><option value="all">All days</option></select></div>
+    <div class="group"><span class="filter-label">Ads seen</span>
+      <select id="bucketSel" aria-label="Number of ads seen"><option value="all">Any number</option></select></div>
+    <button class="reset" id="resetBtn" type="button">Reset filters</button>
+    <span class="note-line" style="margin:0">The test re-runs for the users you select.</span>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+  <section class="kpis" id="kpis" aria-label="Test results"></section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Conversion rate by group</h2>
+      <p class="desc">Whiskers = 95% confidence range. If the ranges don't overlap, the gap is very unlikely to be chance.</p>
+      <div class="chart" id="groupChart"></div>
+    </div>
+    <div class="card">
+      <h2>What is the extra revenue worth?</h2>
+      <p class="desc">Extra conversions = (ad rate &minus; control rate) &times; users who saw the ad.</p>
+      <div class="calc">
+        <label class="filter-label" for="valueInput">Value per conversion (₹)</label>
+        <input id="valueInput" type="number" min="0" step="100">
+      </div>
+      <div class="calc"><div><div class="big" id="extraConv"></div><div class="note-line">extra conversions</div></div>
+        <div><div class="big" id="extraValue"></div><div class="note-line">extra value</div></div></div>
+      <p class="note-line">The dataset has no revenue, so the value per conversion is your assumption. Type your own.</p>
+    </div>
+    <div class="card full">
+      <h2>Conversion by number of ads seen</h2>
+      <p class="desc">Both groups convert more as they see more ads, because active users see more of everything. The ad's real effect is the gap between the two bars.</p>
+      <div class="chart" id="bucketChart"></div>
+    </div>
+    <div class="card">
+      <h2>Conversion by day</h2>
+      <p class="desc">Day the user saw the most ads.</p>
+      <div class="chart" id="dayChart"></div>
+    </div>
+    <div class="card">
+      <h2>Conversion by hour</h2>
+      <p class="desc">Hour the user saw the most ads. The control group is small per hour, so its line is jumpy.</p>
+      <div class="chart" id="hourChart"></div>
+    </div>
+    <div class="card full">
+      <h2>Is the lift significant in each segment?</h2>
+      <p class="desc">Testing many segments raises the chance of a fluke, so each is judged at a stricter level (Bonferroni: 0.05 &divide; number of segments).</p>
+      <div class="table-wrap"><table id="segTable"></table></div>
+    </div>
+    <div class="card full insights">
+      <h2>Key findings (all users)</h2>
+      <ol>__INSIGHTS__</ol>
+      <p class="note-line">__DECISION__</p>
+    </div>
+  </section>
+  <footer>Built by Ayush Raghav with Python, SQL (SQLite), SciPy and Plotly. Data: "Marketing A/B Testing" public dataset (Kaggle).</footer>
+</div>
+
+<script>
+const DATA = __DATA__;
+const state = { day: "all", bucket: "all", value: DATA.valuePerConversion };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const Z = 1.959963984540054;
+
+// Normal CDF (Abramowitz-Stegun 7.1.26, accurate to about 1e-7)
+function normCdf(x) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x / 2);
+  return x >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+}
+function wilson(c, n) {
+  if (!n) return [0, 0];
+  const p = c / n, d = 1 + Z * Z / n, centre = (p + Z * Z / (2 * n)) / d;
+  const half = Z * Math.sqrt(p * (1 - p) / n + Z * Z / (4 * n * n)) / d;
+  return [centre - half, centre + half];
+}
+// Same maths as src/stats_tests.py
+function abTest(c1, n1, c2, n2) {
+  const p1 = n1 ? c1 / n1 : 0, p2 = n2 ? c2 / n2 : 0;
+  const pooled = (c1 + c2) / (n1 + n2), se = Math.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2));
+  const z = se ? (p1 - p2) / se : 0, p = 2 * (1 - normCdf(Math.abs(z)));
+  const ok = c1 > 0 && c2 > 0;
+  const rr = p1 / p2, seL = ok ? Math.sqrt((1 - p1) / c1 + (1 - p2) / c2) : NaN;
+  return { p1, p2, n1, n2, c1, c2, z, p, lift: rr - 1, lo: rr * Math.exp(-Z * seL) - 1, hi: rr * Math.exp(Z * seL) - 1, valid: ok && n1 > 0 && n2 > 0 };
+}
+const pct = (x, d = 2) => (100 * x).toFixed(d) + "%";
+const pval = p => p < 0.0001 ? "< 0.0001" : p.toFixed(4);
+
+// cells: [group(0=ad,1=psa), day, hour, bucket, users, conversions]
+const keep = r => (state.day === "all" || DATA.days[r[1]] === state.day) && (state.bucket === "all" || DATA.buckets[r[3]] === state.bucket);
+function sums(rows) { const s = [[0, 0], [0, 0]]; for (const r of rows) { s[r[0]][0] += r[5]; s[r[0]][1] += r[4]; } return s; }
+function by(rows, idx, size) {
+  const out = Array.from({ length: size }, () => [[0, 0], [0, 0]]);
+  for (const r of rows) { out[r[idx]][r[0]][0] += r[5]; out[r[idx]][r[0]][1] += r[4]; }
+  return out;
+}
+
+function baseLayout(extra = {}) {
+  return Object.assign({
+    paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+    font: { family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 12, color: css("--text-secondary") },
+    margin: { l: 52, r: 16, t: 30, b: 40 },
+    hoverlabel: { bgcolor: css("--surface"), bordercolor: css("--axis"), font: { color: css("--text-primary") } },
+    xaxis: { gridcolor: css("--grid"), linecolor: css("--axis"), tickfont: { color: css("--text-muted") } },
+    yaxis: { gridcolor: css("--grid"), linecolor: css("--axis"), zerolinecolor: css("--axis"), tickfont: { color: css("--text-muted") }, ticksuffix: "%", rangemode: "tozero" },
+    legend: { orientation: "h", x: 0, y: 1.02, yanchor: "bottom", font: { color: css("--text-secondary") } },
+    showlegend: true, bargap: 0.3, bargroupgap: 0.08,
+  }, extra);
+}
+const CONFIG = { displayModeBar: false, responsive: true };
+
+function renderTop(t) {
+  const v = document.getElementById("verdict");
+  if (!t.valid) {
+    v.className = "verdict no";
+    v.innerHTML = `<span class="icon">!</span><div><div class="head">Not enough data in this selection</div><div class="body">One of the groups has no conversions here. Widen the filters.</div></div>`;
+  } else if (t.p < 0.05 && t.lift > 0) {
+    v.className = "verdict yes";
+    v.innerHTML = `<span class="icon">✓</span><div><div class="head">The ad works: ${pct(t.lift, 0)} more conversions, and it is not chance</div><div class="body">p-value ${pval(t.p)} is below 0.05, so a gap this big would almost never happen by luck. 95% range for the lift: ${pct(t.lo, 0)} to ${pct(t.hi, 0)}.</div></div>`;
+  } else {
+    v.className = "verdict no";
+    v.innerHTML = `<span class="icon">?</span><div><div class="head">No proven difference in this selection (lift ${pct(t.lift, 0)})</div><div class="body">p-value ${pval(t.p)} is above 0.05, so this gap could be chance. 95% range for the lift: ${pct(t.lo, 0)} to ${pct(t.hi, 0)}.</div></div>`;
+  }
+  const tiles = [
+    ["Users in selection", (t.n1 + t.n2).toLocaleString("en-US"), `${t.n1.toLocaleString("en-US")} ad · ${t.n2.toLocaleString("en-US")} control`],
+    ["Ad conversion", pct(t.p1), `${t.c1.toLocaleString("en-US")} conversions`],
+    ["Control conversion", pct(t.p2), `${t.c2.toLocaleString("en-US")} conversions`],
+    ["Lift", (t.lift >= 0 ? "+" : "") + pct(t.lift, 1), `+${((t.p1 - t.p2) * 100).toFixed(2)} pts`],
+    ["p-value", pval(t.p), `z = ${t.z.toFixed(2)}`],
+    ["Significant?", t.valid && t.p < 0.05 ? "Yes" : "No", "at 95% confidence"],
+  ];
+  document.getElementById("kpis").innerHTML = tiles.map(([l, val, n]) => `<div class="kpi"><div class="label">${l}</div><div class="value">${val}</div><div class="note">${n}</div></div>`).join("");
+}
+
+function renderValue(t) {
+  const extra = Math.max(0, (t.p1 - t.p2) * t.n1);
+  document.getElementById("extraConv").textContent = Math.round(extra).toLocaleString("en-US");
+  const v = extra * (state.value || 0);
+  document.getElementById("extraValue").textContent = v >= 1e5 ? "₹" + (v / 1e5).toFixed(1) + " lakh" : "₹" + Math.round(v).toLocaleString("en-US");
+}
+
+function renderGroups(t) {
+  const ci = [wilson(t.c1, t.n1), wilson(t.c2, t.n2)], rates = [t.p1, t.p2];
+  Plotly.react("groupChart", [{
+    type: "bar", x: ["Saw the ad", "Control (PSA)"], y: rates.map(r => 100 * r),
+    marker: { color: [css("--accent"), css("--control")], cornerradius: 4 },
+    error_y: { type: "data", symmetric: false, array: ci.map((c, i) => 100 * (c[1] - rates[i])), arrayminus: ci.map((c, i) => 100 * (rates[i] - c[0])), color: css("--text-primary"), thickness: 1.5, width: 8 },
+    text: rates.map(r => pct(r)), textposition: "inside", insidetextanchor: "middle", textfont: { color: "#ffffff", size: 14 },
+    customdata: ci.map(c => `${pct(c[0])} – ${pct(c[1])}`),
+    hovertemplate: "%{x}: %{y:.2f}%<br>95% range %{customdata}<extra></extra>",
+  }], baseLayout({ showlegend: false, bargap: 0.55, margin: { l: 52, r: 16, t: 24, b: 40 } }), CONFIG);
+}
+
+function pairBars(el, labels, cells, tickLabels) {
+  const rate = (g, i) => cells[i][g][1] ? 100 * cells[i][g][0] / cells[i][g][1] : null;
+  const mk = (g, name, color) => ({
+    type: "bar", name, x: tickLabels || labels, y: labels.map((_, i) => rate(g, i)), marker: { color, cornerradius: 3 },
+    customdata: labels.map((_, i) => [cells[i][g][1].toLocaleString("en-US"), cells[i][g][0].toLocaleString("en-US")]),
+    hovertemplate: `${name} · %{x}: %{y:.2f}%<br>%{customdata[1]} of %{customdata[0]} users<extra></extra>`,
+  });
+  Plotly.react(el, [mk(0, "Saw the ad", css("--accent")), mk(1, "Control (PSA)", css("--control"))], baseLayout({ barmode: "group" }), CONFIG);
+}
+
+function renderHour(rows) {
+  const cells = by(rows, 2, 24), hours = Array.from({ length: 24 }, (_, h) => h);
+  const line = (g, name, color, w) => ({
+    type: "scatter", mode: "lines", name, x: hours, y: hours.map(h => cells[h][g][1] ? 100 * cells[h][g][0] / cells[h][g][1] : null),
+    line: { color, width: w }, connectgaps: false,
+    customdata: hours.map(h => cells[h][g][1].toLocaleString("en-US")),
+    hovertemplate: `${name} · %{x}:00: %{y:.2f}% (%{customdata} users)<extra></extra>`,
+  });
+  Plotly.react("hourChart", [line(0, "Saw the ad", css("--accent"), 2), line(1, "Control (PSA)", css("--control"), 1.5)],
+    baseLayout({ hovermode: "x unified", xaxis: { ...baseLayout().xaxis, dtick: 3, ticksuffix: ":00" } }), CONFIG);
+}
+
+function renderSegTable() {
+  const segs = state.bucket === "all" && state.day === "all" ? "both" : (state.day === "all" ? "day" : "bucket");
+  const rows = DATA.cells.filter(keep);
+  const blocks = [];
+  const make = (name, labels, idx) => {
+    const cells = by(rows, idx, labels.length);
+    const strict = 0.05 / labels.length;
+    return labels.map((lab, i) => {
+      const t = abTest(cells[i][0][0], cells[i][0][1], cells[i][1][0], cells[i][1][1]);
+      const sig = t.valid && t.p < strict && t.lift > 0;
+      return `<tr><td>${name}: ${lab}</td><td>${t.n1.toLocaleString("en-US")}</td><td>${t.n2.toLocaleString("en-US")}</td><td>${pct(t.p1)}</td><td>${pct(t.p2)}</td><td>${t.valid ? (t.lift >= 0 ? "+" : "") + pct(t.lift, 0) : "–"}</td><td>${t.valid ? pval(t.p) : "–"}</td><td class="${sig ? "sig" : ""}">${sig ? "✓ Yes" : "No"}</td></tr>`;
+    }).join("");
+  };
+  if (segs !== "bucket") blocks.push(make("Day", DATA.days, 1));
+  if (segs !== "day") blocks.push(make("Ads seen", DATA.buckets, 3));
+  document.getElementById("segTable").innerHTML = "<thead><tr><th>Segment</th><th>Ad users</th><th>Control users</th><th>Ad rate</th><th>Control rate</th><th>Lift</th><th>p-value</th><th>Significant (strict)?</th></tr></thead><tbody>" + blocks.join("") + "</tbody>";
+}
+
+function render() {
+  const rows = DATA.cells.filter(keep);
+  const s = sums(rows), t = abTest(s[0][0], s[0][1], s[1][0], s[1][1]);
+  renderTop(t); renderValue(t); renderGroups(t);
+  pairBars("bucketChart", DATA.buckets, by(rows, 3, DATA.buckets.length), DATA.buckets.map(b => b + " ads"));
+  pairBars("dayChart", DATA.days, by(rows, 1, 7), DATA.days.map(d => d.slice(0, 3)));
+  renderHour(rows); renderSegTable();
+}
+
+const daySel = document.getElementById("daySel"), bucketSel = document.getElementById("bucketSel"), valueInput = document.getElementById("valueInput");
+DATA.days.forEach(d => daySel.add(new Option(d, d)));
+DATA.buckets.forEach(b => bucketSel.add(new Option(b + " ads", b)));
+valueInput.value = state.value;
+daySel.addEventListener("change", () => { state.day = daySel.value; render(); });
+bucketSel.addEventListener("change", () => { state.bucket = bucketSel.value; render(); });
+valueInput.addEventListener("input", () => { state.value = Number(valueInput.value) || 0; const s = sums(DATA.cells.filter(keep)); renderValue(abTest(s[0][0], s[0][1], s[1][0], s[1][1])); });
+document.getElementById("resetBtn").addEventListener("click", () => {
+  state.day = "all"; state.bucket = "all"; state.value = DATA.valuePerConversion;
+  daySel.value = "all"; bucketSel.value = "all"; valueInput.value = state.value; render();
+});
+render();
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+</body>
+</html>
